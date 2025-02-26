@@ -2,7 +2,9 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { Toaster } from "sonner";
 import ConvexClientProvider from "@/Providers/convex-clerk-provider";
+import { ClerkProvider } from "@clerk/nextjs";
 
 // Load fonts
 const geistSans = localFont({
@@ -27,12 +29,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    <ClerkProvider>
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ConvexClientProvider>
+          <Toaster/>
           {children}
         </ConvexClientProvider>
       </body>
     </html>
+    </ClerkProvider>
   );
 }
