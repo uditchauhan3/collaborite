@@ -3,8 +3,8 @@
 import { useOrganizationList } from "@clerk/nextjs";
 import { Item } from "./item";
 
-export const List =()=>{
-    const { userMemberships} = useOrganizationList({
+export const List = () => {
+    const { userMemberships } = useOrganizationList({
         userMemberships: {
             infinite: true,
         },
@@ -12,17 +12,16 @@ export const List =()=>{
 
     if (!userMemberships.data?.length) return null;
     
-    return(
+    return (
         <ul className="space-y-4">
-            {userMemberships.data?.map((mem) =>(
+            {userMemberships.data?.map((mem) => (
                 <Item
-                key={mem.organization.id}
-                id={mem.organization.id}
-                name={mem.organization.name}
-                imageUrl={mem.organization.imageUrl}    
+                    key={mem.organization.id}
+                    id={mem.organization.id}
+                    name={mem.organization.name}
+                    imageUrl={mem.organization.imageUrl}    
                 />
             ))}
-            
         </ul>
     );
 };
