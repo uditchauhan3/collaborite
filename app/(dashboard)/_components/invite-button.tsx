@@ -22,5 +22,5 @@ export const InviteButton =() => {
                 <OrganizationProfile/>
             </DialogContent>
         </Dialog>
-    )
-}
+    );
+};

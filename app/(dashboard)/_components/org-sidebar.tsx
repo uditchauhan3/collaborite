@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import {Poppins} from "next/font/google";
-import { Ghost, LayoutDashboard, Star } from "lucide-react";
+import { LayoutDashboard, Star } from "lucide-react";
 import { OrganizationSwitcher } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation"
 import {cn} from "@/lib/utils";

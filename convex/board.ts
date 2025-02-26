@@ -2,16 +2,16 @@ import { v } from "convex/values";
 import {mutation} from "./_generated/server";
 
 const images=[
-    "/public/placeholder/1.svg",
-    "/public/placeholder/2.svg",
-    "/public/placeholder/3.svg",
-    "/public/placeholder/4.svg",
-    "/public/placeholder/5.svg",
-    "/public/placeholder/6.svg",
-    "/public/placeholder/7.svg",
-    "/public/placeholder/8.svg",
-    "/public/placeholder/9.svg",
-    "/public/placeholder/10.svg",
+    "/placeholder/1.svg",
+    "/placeholder/2.svg",
+    "/placeholder/3.svg",
+    "/placeholder/4.svg",
+    "/placeholder/5.svg",
+    "/placeholder/6.svg",
+    "/placeholder/7.svg",
+    "/placeholder/8.svg",
+    "/placeholder/9.svg",
+    "/placeholder/10.svg",
 ]
 
 
@@ -39,5 +39,18 @@ export const create = mutation({
 
         return board;
 
-    }
-})
+    },
+});
+
+export const remove = mutation({
+    args: { id: v.id("boards")},
+    handler: async ( ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+
+        if (!identity) {
+            throw new Error("Unauthorized");
+        }
+
+        await ctx.db.delete(args.id);
+    },
+});
