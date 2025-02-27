@@ -1,8 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-import dotenv from "dotenv";
 
-dotenv.config();
+function extractLinksFromText(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const links = text.match(urlRegex) || [];
+  const textWithoutLinks = text.replace(urlRegex, '');
+  return { links, textWithoutLinks };
+}
 
 export async function POST(req: Request) {
   if (!process.env.GEMINI_API_KEY) {
@@ -26,9 +30,8 @@ export async function POST(req: Request) {
 
     console.log("Sending message to Gemini:", message);
 
-    // Use the correct model name and version
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.0-pro",
+      model: "gemini-1.5-pro",
       generationConfig: {
         temperature: 0.9,
         topK: 1,
@@ -37,15 +40,16 @@ export async function POST(req: Request) {
       },
     });
 
-    // Generate response
-    const chat = model.startChat({
-      history: [],
-      generationConfig: {
-        maxOutputTokens: 2048,
-      },
-    });
+    // Modify the prompt to specifically request links
+    const enhancedPrompt = `
+      Please provide a detailed response to the following question/request. 
+      Include relevant links to documentation, tutorials, or resources when applicable.
+      Make sure to format links as complete URLs starting with http:// or https://.
+      
+      User's question/request: ${message}
+    `;
 
-    const result = await chat.sendMessage(message);
+    const result = await model.generateContent(enhancedPrompt);
     const response = await result.response;
     const text = response.text();
 
@@ -53,9 +57,16 @@ export async function POST(req: Request) {
       throw new Error("Empty response from AI");
     }
 
-    console.log("Received response from Gemini:", text);
+    // Extract links from the response
+    const { links, textWithoutLinks } = extractLinksFromText(text);
 
-    return NextResponse.json({ response: text });
+    console.log("Received response from Gemini:", text);
+    console.log("Extracted links:", links);
+
+    return NextResponse.json({ 
+      response: textWithoutLinks.trim(),
+      links: links 
+    });
   } catch (error) {
     console.error("Error details:", error);
     return NextResponse.json(

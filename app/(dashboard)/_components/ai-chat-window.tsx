@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Bot, Loader2 } from "lucide-react";
+import { X, Bot, Loader2, Link as LinkIcon } from "lucide-react";
 import Draggable from "react-draggable";
 import { useUser } from "@clerk/nextjs";
 
 interface Message {
   id: string;
   content: string;
+  links?: string[];
   role: "user" | "assistant";
   createdAt: number;
 }
@@ -36,9 +37,8 @@ export const AIChatWindow = ({ onClose }: AIChatWindowProps) => {
     e.preventDefault();
     if (!newMessage.trim() || !user || isLoading) return;
 
-    setError(null); // Clear any previous errors
+    setError(null);
     
-    // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       content: newMessage.trim(),
@@ -67,10 +67,10 @@ export const AIChatWindow = ({ onClose }: AIChatWindowProps) => {
         throw new Error(data.error || 'Failed to get AI response');
       }
 
-      // Add AI response
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: data.response,
+        links: data.links,
         role: "assistant",
         createdAt: Date.now(),
       };
@@ -79,14 +79,6 @@ export const AIChatWindow = ({ onClose }: AIChatWindowProps) => {
     } catch (error) {
       console.error("Error:", error);
       setError((error as Error).message);
-      // Add error message to chat
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "Sorry, I encountered an error. Please try again.",
-        role: "assistant",
-        createdAt: Date.now(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -128,7 +120,26 @@ export const AIChatWindow = ({ onClose }: AIChatWindowProps) => {
                     : "bg-gray-100"
                 }`}
               >
-                <p className="text-sm">{message.content}</p>
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                {message.links && message.links.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs font-semibold flex items-center gap-1">
+                      <LinkIcon className="h-3 w-3" />
+                      Related Links:
+                    </p>
+                    {message.links.map((link, index) => (
+                      <a
+                        key={index}
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline block truncate"
+                      >
+                        {link}
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
