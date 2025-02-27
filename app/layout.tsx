@@ -5,6 +5,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import ConvexClientProvider from "@/Providers/convex-clerk-provider";
 import { ClerkProvider } from "@clerk/nextjs";
+import { ModalProviders } from "@/Providers/modal-provider";
 
 // Load fonts
 const geistSans = localFont({
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ConvexClientProvider>
           <Toaster/>
+          <ModalProviders />
           {children}
         </ConvexClientProvider>
       </body>

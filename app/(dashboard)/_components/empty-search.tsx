@@ -8,7 +8,7 @@ export const EmptySearch = () => {
         height={140}
         width={140}
         alt="Empty"
-        priority
+        
       />
       <h2 className="text-2xl font-semibold mt-6">
         No results found!

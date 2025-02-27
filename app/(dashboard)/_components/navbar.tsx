@@ -15,12 +15,11 @@ export const Navbar = () => {
 
   return (
     <div className="flex items-center p-5">
-      {/* Search bar visible only in large screens */}
+      
       <div className="hidden lg:flex flex-1">
         <SearchInput />
       </div>
 
-      {/* UserButton aligned left in small screens, right in large screens */}
       <div className="lg:ml-auto flex items-center gap-x-2">
         {organization && (
           <>
@@ -37,6 +36,7 @@ export const Navbar = () => {
             >
               <MessageCircle className="h-5 w-5 text-gray-500" />
             </button>
+            
             <InviteButton />
           </>
         )}

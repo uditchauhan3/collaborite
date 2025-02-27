@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
 import { useOrganization } from "@clerk/nextjs";
@@ -34,7 +33,7 @@ export const EmptyBoards = () => {
                 height={110}
                 width={110}
                 alt="Empty"
-                priority
+                
             />
             <h2 className="text-2xl font-semibold mt-6">
                 Create your first board!

@@ -1,15 +1,15 @@
 import { Sidebar } from "./_components/sidebar";
 import { Navbar } from "./_components/navbar";
 import { OrgSidebar } from "./_components/org-sidebar";
-// hey layout.tsx
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+const DashboardLayout = ({ children, }: DashboardLayoutProps) => {
   return (
     <main className="h-full">
+      
       <Sidebar />
 
       <div className="pl-[60px] h-full">
