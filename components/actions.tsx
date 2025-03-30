@@ -78,7 +78,7 @@ export const Actions = ({
                 </DropdownMenuItem>
                 <ConfirmModal
                 header="Delete boards?"
-                description="This wll delete the board and all of its contents."
+                description="This will delete the board and all of its contents."
                 disabled={pending}
                 onConfirm={onDelete}
                 >
