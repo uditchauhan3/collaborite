@@ -1,14 +1,129 @@
-// canvas.ts
+export type Color = {
+  r: number;
+  g: number;
+  b: number;
+};
 
+export type Camera ={
+  x: number;
+  y: number;
+};
+
+export enum LayerType {
+  Rectangle,
+  Ellipse,
+  Path,
+  Text,
+  Note,
+};
+
+export type RectangleLayer = {
+  type: LayerType.Rectangle;
+  x: number;
+  y: number;
+  height: number;
+  width: number;
+  fill: Color;
+  value?: string;
+};
+
+export type EllipseLayer = {
+  type: LayerType.Ellipse;
+  x: number;
+  y: number;
+  height: number;
+  width: number;
+  fill: Color;
+  value?: string;
+};
+
+export type PathLayer = {
+  type: LayerType.Path;
+  x: number;
+  y: number;
+  height: number;
+  width: number;
+  fill: Color;
+  points: number[][];
+  value?: string;
+};
+
+export type TextLayer = {
+  type: LayerType.Text;
+  x: number;
+  y: number;
+  height: number;
+  width: number;
+  fill: Color;
+  value?: string;
+};
+
+export type NoteLayer = {
+  type: LayerType.Note;
+  x: number;
+  y: number;
+  height: number;
+  width: number;
+  fill: Color;
+  value?: string;
+};
+
+export type Point = {
+  x: number;
+  y: number;
+};
+
+export type XYWH = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+export enum Side {
+  Top = 1,
+  Bottom = 2,
+  Left = 4,
+  Right = 8,
+};
+
+  export type CanvasState =
+  | {
+    mode: canvasMode.None;
+  }
+  | {
+    mode: canvasMode.SelectionNet,
+    origin: Point;
+    current?: Point;
+  }
+  | {
+    mode: canvasMode.Translating,
+    current: Point;
+  }
+  | {
+    mode: canvasMode.Inserting,
+    layerType: LayerType.Ellipse | LayerType.Rectangle | LayerType.Text | LayerType.Note;
+  }
+  | {
+    mode: canvasMode.Pencil,
+  }
+  | {
+    mode: canvasMode.Pressing,
+    origin: Point;
+  }
+  | {
+    mode: canvasMode.Resizing,
+    initialBounds: XYWH;
+    corner: Side;
+  };
+  
 export enum canvasMode {
-    None = "none",
-    Select = "select",
-    Draw = "draw",
-    Text = "text",
-    // Add more modes if needed
-  }
+  None = "none",
+  Pressing = "pressing",
+  Translating = "translating",
+  Inserting = "inserting",
+  Resizing = "resizing",
+  Pencil = "pencil",
+  SelectionNet = "selectionNet"
   
-  export type CanvasState = {
-    mode: canvasMode; // lowercase 'mode' to match usage
-  }
-  
+};
