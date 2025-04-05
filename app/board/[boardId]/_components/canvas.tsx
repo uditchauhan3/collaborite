@@ -22,8 +22,8 @@ import {
 import { CursorsPresence } from "./cursors-presence";
 import { pointerEventToCanvasPoint } from "@/lib/utils";
 import { useStorage } from "@liveblocks/react";
-import { LiveObject } from "@liveblocks/client";
-import { LayerPreview } from "./layer-preview"; // ✅ Ensure you have this component
+import { LiveList, LiveObject } from "@liveblocks/client";
+import { LayerPreview } from "./layer-preview";
 
 const MAX_LAYERS = 100;
 
@@ -32,13 +32,15 @@ interface CanvasProps {
 }
 
 export const Canvas = ({ boardId }: CanvasProps) => {
-  const layerIds = useStorage((root) => root.layerIds);
+  // 👇 Cast layerIds as LiveList<string> | null
+  const layerIds = useStorage((root) => root.layerIds as LiveList<string> | null);
 
   const [canvasState, setCanvasState] = useState<CanvasState>({
     mode: canvasMode.None,
   });
 
   const [camera, setCamera] = useState<Camera>({ x: 0, y: 0 });
+
   const [lastUsedColor, setLastUsedColor] = useState<Color>({
     r: 0,
     g: 0,
@@ -49,6 +51,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
   const canUndo = useCanUndo();
   const canRedo = useCanRedo();
 
+  // 👇 Insert new layers on canvas
   const insertLayer = useMutation(
     ({ storage, setMyPresence }, layerType: LayerType, position: Point) => {
       const liveLayers = storage.get("layers");
@@ -57,6 +60,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
       if (liveLayers.size >= MAX_LAYERS) return;
 
       const layerId = nanoid();
+
       const layer = new LiveObject({
         type: layerType,
         x: position.x,
@@ -130,6 +134,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
         undo={history.undo}
         redo={history.redo}
       />
+
       <svg
         className="h-[100vh] w-[100vw]"
         onWheel={onWheel}
@@ -138,14 +143,13 @@ export const Canvas = ({ boardId }: CanvasProps) => {
         onPointerUp={onPointerUp}
       >
         <g transform={`translate(${camera.x}, ${camera.y})`}>
-          {layerIds?.map((layerId) => (
+          {layerIds?.map((layerId: string) => (
             <LayerPreview
               key={layerId}
               id={layerId}
               onLayerPointerDown={() => {}}
             />
           ))}
-
           <CursorsPresence />
         </g>
       </svg>
