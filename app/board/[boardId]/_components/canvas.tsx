@@ -24,6 +24,7 @@ import { pointerEventToCanvasPoint } from "@/lib/utils";
 import { useStorage } from "@liveblocks/react";
 import { LiveList, LiveObject } from "@liveblocks/client";
 import { LayerPreview } from "./layer-preview";
+//import { LayerPreview } from "./layer-preview";
 
 const MAX_LAYERS = 100;
 
@@ -148,6 +149,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
               key={layerId}
               id={layerId}
               onLayerPointerDown={() => {}}
+              selectionColor="#000"
             />
           ))}
           <CursorsPresence />
