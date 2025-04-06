@@ -5,7 +5,10 @@ import { useStorage } from "@/liveblocks.config";
 import { memo } from "react";
 import { Rectangle } from "./rectangle";
 import { Ellipse } from "./ellipse";
-import {Text} from "./text"
+import {Text} from "./text";
+import { Note } from "./note";
+import { Path } from "./path";
+import { colorsToCss } from "@/lib/utils";
 
 interface LayerPreviewProps{
     id: string;
@@ -25,6 +28,27 @@ export const LayerPreview= memo(({
         return null;
     }
     switch (layer.type){
+        case LayerType.Path:
+            return (
+                <Path 
+                 key={id}
+                 points={layer.points}
+                 onPointerDown={(e) => onLayerPointerDown(e, id)}
+                 x={layer.x}
+                 y={layer.y}
+                 fill={layer.fill ? colorsToCss(layer.fill) : "#000"}
+                 stroke={selectionColor}
+                />
+            )
+        case LayerType.Note:
+            return (
+                <Note
+                id={id}
+                layer={layer}
+                onPointDown={onLayerPointerDown}
+                selectionColor={selectionColor}
+                />
+            );
         case LayerType.Text:
             return (
                 <Text
@@ -33,7 +57,7 @@ export const LayerPreview= memo(({
                 onPointDown={onLayerPointerDown}
                 selectionColor={selectionColor}
                 />
-            )
+            );
         case LayerType.Ellipse:
             return(
                 <Ellipse

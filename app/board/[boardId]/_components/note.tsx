@@ -1,8 +1,8 @@
 import { Kalam } from "next/font/google";
 import ContenEditable , {ContentEditableEvent} from "react-contenteditable"
 
-import {TextLayer} from "@/types/canvas"
-import { cn,colorsToCss } from "@/lib/utils";
+import {NoteLayer} from "@/types/canvas";
+import { cn,colorsToCss, getContrastingTextColor } from "@/lib/utils";
 import { useMutation } from "@/liveblocks.config";
 
 const font = Kalam({
@@ -13,28 +13,28 @@ const font = Kalam({
 
 const calculateFontSize =(width:number,height:number)=>{
     const maxFontSize = 96;
-    const scaleFactor= 0.5;
+    const scaleFactor= 0.15;
     const fontSizeBasedOnHeight = height* scaleFactor;
     const fontSizeBasedOnWidth = width* scaleFactor;
 
     return Math.min(fontSizeBasedOnHeight,fontSizeBasedOnWidth,maxFontSize)
 }
 
-interface TextProps {
+interface NoteProps {
 
     id:string;
-    layer:TextLayer;
+    layer:NoteLayer;
     onPointDown:(e: React.PointerEvent,id:string)=> void;
     selectionColor?: string;
 
 };
-export const Text=({
+export const Note = ({
     layer,
     onPointDown,
     id,
     selectionColor,
 
-}:TextProps)=>{
+}:NoteProps)=>{
     const { x,y,width,value,height,fill}= layer;
   
     const updateValue = useMutation((
@@ -58,22 +58,24 @@ export const Text=({
         height={height}
         onPointerDown={(e)=>onPointDown(e,id)}
         style={{
-            outline: selectionColor ? `1px solid ${selectionColor}` : "none"
+            outline: selectionColor ? `1px solid ${selectionColor}` : "none",
+            backgroundColor: fill ? colorsToCss(fill) : "#000",
         }}
+        className="shadow-md drop-shadow-xl"
         >
             <ContenEditable
             html={value || "Text"}
             onChange={handleContentChange}
             className={cn(
-                "h-full w-full flex items-center justify-center text-center drop-shadow-md outline-none",
+                "h-full w-full flex items-center justify-center text-center outline-none",
                 font.className
             )}
             style={{
                 fontSize : calculateFontSize(width,height),
-                color: fill ? colorsToCss(fill) : "#000",
+                color: fill ? getContrastingTextColor(fill) : "#000",
 
             }}
             />
         </foreignObject>
-    )
-}
+    );
+};
