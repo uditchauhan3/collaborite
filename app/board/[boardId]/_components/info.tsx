@@ -12,26 +12,27 @@ import { Actions } from "@/components/actions";
 import { Id } from "@/convex/_generated/dataModel";
 import { useRenameModel } from "@/store/use-rename-modal";
 import { Menu } from "lucide-react";
+import { BoardChatButton } from "./board-chat-button";
 
 interface InfoProps{
     boardId:string;
-};
-const font =Poppins({
+}
+
+const font = Poppins({
     subsets:["latin"],
-    weight: ["600"],
+    weight:["600"],
 });
 
-const TableSeprator=()=>{
+const TableSeprator = () => {
     return (
-        <div className="text-neutral-300 px-1.5">
+        <div className="text-slate-300 px-1.5 h-6">
             |
         </div>
-    )
-}
+    );
+};
 
 export const Info = ({
     boardId,
-
 }:InfoProps) =>{
     const {onOpen}= useRenameModel();
     const data= useQuery(api.board.get,{
@@ -65,6 +66,8 @@ export const Info = ({
                 {data.title}
             </Button>
             </Hint>
+            <TableSeprator/>
+            <BoardChatButton />
             <TableSeprator/>
             <Actions
             id={data._id}
