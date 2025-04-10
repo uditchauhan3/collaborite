@@ -9,13 +9,13 @@ import {Layer, Color} from "@/types/canvas"
   
 const client = createClient({
   throttle: 16,
-  authEndpoint: "/api2/liveblocks-auth",
+  authEndpoint: "/api/liveblocks-auth",
   
 });
 
 // Presence represents the properties that exist on every user in the Room
 // and that will automatically be kept in sync. Accessible through the
-// `user.presence` property. Must be JSON-serializable.
+// user.presence property. Must be JSON-serializable.
 type Presence = {
   cursor: { x: number, y: number } | null,
   selection:string[];
@@ -98,9 +98,9 @@ export const {
 } = createRoomContext<Presence, Storage, UserMeta, RoomEvent, ThreadMetadata>(client, {
   async resolveUsers({ userIds }) {
     // Used only for Comments. Return a list of user information retrieved
-    // from `userIds`. This info is used in comments, mentions etc.
+    // from userIds. This info is used in comments, mentions etc.
     
-    // const usersData = await __fetchUsersFromDB__(userIds);
+    // const usersData = await _fetchUsersFromDB_(userIds);
     // 
     // return usersData.map((userData) => ({
     //   name: userData.name,
@@ -110,22 +110,22 @@ export const {
     return [];
   },
   async resolveMentionSuggestions({ text, roomId }) {
-    // Used only for Comments. Return a list of userIds that match `text`.
+    // Used only for Comments. Return a list of userIds that match text.
     // These userIds are used to create a mention list when typing in the
     // composer. 
     //
-    // For example when you type "@jo", `text` will be `"jo"`, and 
+    // For example when you type "@jo", text will be "jo", and 
     // you should to return an array with John and Joanna's userIds:
     // ["john@example.com", "joanna@example.com"]
     
-    // const userIds = await __fetchAllUserIdsFromDB__(roomId);
+    // const userIds = await _fetchAllUserIdsFromDB_(roomId);
     //
-    // Return all userIds if no `text`
+    // Return all userIds if no text
     // if (!text) {
     //   return userIds;
     // }
     //
-    // Otherwise, filter userIds for the search `text` and return
+    // Otherwise, filter userIds for the search text and return
     // return userIds.filter((userId) => 
     //   userId.toLowerCase().includes(text.toLowerCase())  
     // );

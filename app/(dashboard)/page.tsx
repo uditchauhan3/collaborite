@@ -1,5 +1,7 @@
-"use client"
-import { useOrganization } from "@clerk/nextjs";
+"use client";
+
+import { useEffect } from "react";
+import { useOrganization, useOrganizationList } from "@clerk/nextjs";
 import { EmptyOrg } from "./_components/empty-org";
 import { BoardList } from "./_components/board-list";
 
@@ -12,6 +14,16 @@ interface DashboardPageProps {
 
 const DashboardPage = ({ searchParams }: DashboardPageProps) => {
   const { organization } = useOrganization();
+  const { userMemberships, setActive } = useOrganizationList();
+
+  useEffect(() => {
+    if (!organization && userMemberships?.data?.length && setActive) {
+      const firstOrg = userMemberships.data[0].organization;
+      if (firstOrg) {
+        setActive({ organization: firstOrg.id });
+      }
+    }
+  }, [organization, userMemberships, setActive]);
 
   return (
     <div className="flex-1 h-[calc(100%-80px)] p-6">
