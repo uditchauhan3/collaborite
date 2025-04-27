@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma"; // ✅ Import prisma to save AI responses
 
 function extractLinksFromText(text: string) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -19,18 +20,18 @@ export async function POST(req: Request) {
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const { message } = await req.json();
+    const { message, boardId, userId } = await req.json(); // ✅ also accept boardId and userId
 
-    if (!message) {
+    if (!message || !boardId || !userId) {
       return NextResponse.json(
-        { error: "Message is required" },
+        { error: "Message, boardId, and userId are required" },
         { status: 400 }
       );
     }
 
     console.log("Sending message to Gemini:", message);
 
-    const model = genAI.getGenerativeModel({ 
+    const model = genAI.getGenerativeModel({
       model: "gemini-1.5-pro",
       generationConfig: {
         temperature: 0.9,
@@ -40,16 +41,13 @@ export async function POST(req: Request) {
       },
     });
 
-    // Modify the prompt to specifically request links
-    const enhancedPrompt = `
-      Please provide a detailed response to the following question/request. 
-      Include relevant links to documentation, tutorials, or resources when applicable.
-      Make sure to format links as complete URLs starting with http:// or https://.
-      
-      User's question/request: ${message}
-    `;
+    const result = await model.generateContent(`
+      Please provide a detailed response to the following question/request.
+      Include relevant links if applicable.
 
-    const result = await model.generateContent(enhancedPrompt);
+      User's question/request: ${message}
+    `);
+
     const response = await result.response;
     const text = response.text();
 
@@ -57,24 +55,39 @@ export async function POST(req: Request) {
       throw new Error("Empty response from AI");
     }
 
-    // Extract links from the response
     const { links, textWithoutLinks } = extractLinksFromText(text);
 
     console.log("Received response from Gemini:", text);
     console.log("Extracted links:", links);
 
-    return NextResponse.json({ 
-      response: textWithoutLinks.trim(),
-      links: links 
-    });
-  } catch (error) {
-    console.error("Error details:", error);
-    return NextResponse.json(
-      { 
-        error: "Failed to process request", 
-        details: (error as Error).message 
+    // ✅ Save AI's reply into database too
+    await prisma.chat.create({
+      data: {
+        boardId,
+        userId: "ai-assistant",
+        message: textWithoutLinks.trim(),
+        isAi: true,
       },
-      { status: 500 }
-    );
+    });
+
+    return NextResponse.json({
+      response: textWithoutLinks.trim(),
+      links: links,
+    });
+
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error details:", error.message);
+      return NextResponse.json(
+        { error: "Failed to process request", details: error.message },
+        { status: 500 }
+      );
+    } else {
+      console.error("Unknown error", error);
+      return NextResponse.json(
+        { error: "Unknown server error" },
+        { status: 500 }
+      );
+    }
   }
-} 
+}

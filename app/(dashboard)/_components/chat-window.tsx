@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import Draggable from "react-draggable";
 import { useUser } from "@clerk/nextjs";
+import { useParams } from "next/navigation"; // ✅ Import useParams
 
 interface Message {
   id: string;
@@ -21,9 +22,10 @@ export const ChatWindow = ({ onClose }: ChatWindowProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const { user } = useUser();
+  const params = useParams(); // ✅ Get boardId from URL
+  const boardId = params.boardId as string; // ✅ extract boardId
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Scroll to bottom when new messages arrive
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -32,27 +34,70 @@ export const ChatWindow = ({ onClose }: ChatWindowProps) => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !user) return;
+  useEffect(() => {
+    if (!boardId) return; // ✅ if no boardId, don't fetch
 
-    // Add new message
-    const message: Message = {
-      id: Date.now().toString(),
-      content: newMessage.trim(),
-      userId: user.id,
-      username: user.firstName || "Anonymous",
-      createdAt: Date.now(),
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch(`/api/chats?boardId=${boardId}`);
+        const data = await res.json();
+
+        const formatted = data.map((chat: any) => ({
+          id: chat.id,
+          content: chat.message,
+          userId: chat.userId,
+          username: chat.userId === "ai-assistant" ? "AI Assistant" : "User",
+          createdAt: new Date(chat.createdAt).getTime(),
+        }));
+
+        setMessages(formatted);
+      } catch (error) {
+        console.error("Failed to load chats", error);
+      }
     };
 
-    setMessages((prev) => [...prev, message]);
-    setNewMessage("");
+    fetchMessages();
+  }, [boardId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !user || !boardId) return;
+
+    try {
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          boardId,
+          userId: user.id,
+          message: newMessage.trim(),
+          isAi: false,
+        }),
+      });
+
+      const newChat = await res.json();
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: newChat.id,
+          content: newChat.message,
+          userId: newChat.userId,
+          username: user.firstName || "Anonymous",
+          createdAt: new Date(newChat.createdAt).getTime(),
+        },
+      ]);
+
+      setNewMessage("");
+    } catch (error) {
+      console.error("Failed to send message", error);
+    }
   };
 
   return (
     <Draggable handle=".handle">
       <div className="fixed bottom-20 right-20 w-80 h-96 bg-white rounded-lg shadow-xl flex flex-col border">
-        {/* Header - Draggable handle */}
+        {/* Header */}
         <div className="handle cursor-move p-3 border-b flex items-center justify-between bg-gray-50 rounded-t-lg">
           <h3 className="font-semibold text-gray-700">Team Chat</h3>
           <button
@@ -63,7 +108,7 @@ export const ChatWindow = ({ onClose }: ChatWindowProps) => {
           </button>
         </div>
 
-        {/* Messages area */}
+        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((message) => (
             <div
@@ -87,7 +132,7 @@ export const ChatWindow = ({ onClose }: ChatWindowProps) => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Message input */}
+        {/* Input */}
         <form onSubmit={handleSubmit} className="p-3 border-t">
           <div className="flex gap-2">
             <input
@@ -108,4 +153,4 @@ export const ChatWindow = ({ onClose }: ChatWindowProps) => {
       </div>
     </Draggable>
   );
-}; 
+};
