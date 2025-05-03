@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import Draggable from "react-draggable";
 import { useSelf, useOthers, useBroadcastEvent, useStorage } from "@/liveblocks.config";
 import { LiveList } from "@liveblocks/client";
+import { useParams } from "next/navigation";
 
 interface Message {
   id: string;
@@ -19,12 +20,15 @@ interface BoardChatProps {
 }
 
 export const BoardChat = ({ onClose }: BoardChatProps) => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const currentUser = useSelf();
   const others = useOthers();
   const broadcast = useBroadcastEvent();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const storage = useStorage();
+  const params = useParams();
+  const boardId = params.boardId as string;
 
   // Initialize messages storage if it doesn't exist
   useEffect(() => {
@@ -33,7 +37,31 @@ export const BoardChat = ({ onClose }: BoardChatProps) => {
     }
   }, [storage]);
 
-  const messages = storage?.get("messages") || [];
+  // Fetch messages from database
+  useEffect(() => {
+    if (!boardId) return;
+
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch(`/api/chats?boardId=${boardId}`);
+        const data = await res.json();
+
+        const formatted = data.map((chat: any) => ({
+          id: chat.id,
+          content: chat.message,
+          userId: chat.userId,
+          username: chat.userId === "ai-assistant" ? "AI Assistant" : "User",
+          createdAt: new Date(chat.createdAt).getTime(),
+        }));
+
+        setMessages(formatted);
+      } catch (error) {
+        console.error("Failed to load chats", error);
+      }
+    };
+
+    fetchMessages();
+  }, [boardId]);
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -46,23 +74,37 @@ export const BoardChat = ({ onClose }: BoardChatProps) => {
 
   // Listen for new messages from other users
   useEffect(() => {
-    const handleMessage = (event: { type: string; message: Message }) => {
+    const handleMessage = async (event: { type: string; message: Message }) => {
       if (event.type === "CHAT_MESSAGE") {
-        const currentMessages = storage.get("messages");
-        if (currentMessages) {
-          currentMessages.push(event.message);
+        // Add message to database
+        try {
+          await fetch("/api/chats", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              boardId,
+              userId: event.message.userId,
+              message: event.message.content,
+              isAi: false,
+            }),
+          });
+        } catch (error) {
+          console.error("Failed to save message to database", error);
         }
+
+        // Update local state
+        setMessages(prev => [...prev, event.message]);
       }
     };
 
     // Subscribe to broadcast events
     const unsubscribe = broadcast.subscribe(handleMessage);
     return () => unsubscribe();
-  }, [broadcast, storage]);
+  }, [broadcast, boardId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !currentUser) return;
+    if (!newMessage.trim() || !currentUser || !boardId) return;
 
     // Create new message
     const message: Message = {
@@ -73,19 +115,40 @@ export const BoardChat = ({ onClose }: BoardChatProps) => {
       createdAt: Date.now(),
     };
 
-    // Add message to storage
-    const currentMessages = storage.get("messages");
-    if (currentMessages) {
-      currentMessages.push(message);
+    try {
+      // Save to database
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          boardId,
+          userId: currentUser.connectionId.toString(),
+          message: newMessage.trim(),
+          isAi: false,
+        }),
+      });
+
+      const savedMessage = await res.json();
+
+      // Update local state
+      setMessages(prev => [...prev, {
+        ...message,
+        id: savedMessage.id,
+      }]);
+
+      setNewMessage("");
+
+      // Broadcast message to other users
+      broadcast({
+        type: "CHAT_MESSAGE",
+        message: {
+          ...message,
+          id: savedMessage.id,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to send message", error);
     }
-
-    setNewMessage("");
-
-    // Broadcast message to other users
-    broadcast({
-      type: "CHAT_MESSAGE",
-      message,
-    });
   };
 
   if (!currentUser) {

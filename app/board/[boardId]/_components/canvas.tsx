@@ -11,6 +11,11 @@ import {
   Color,
   Side,
   XYWH,
+  ArrowStyle,
+  ArrowPoint,
+  Layer,
+  ArrowLayer,
+  PathLayer,
 } from "@/types/canvas";
 import { Info } from "./info";
 import { Participants } from "./participants";
@@ -42,6 +47,7 @@ import { Path } from "./path";
 import { useDisableScrollBounce } from "@/hooks/use-disable-scroll-bounce";
 import { useDeleteLayers } from "@/hooks/use-delete-layers";
 import { on } from "events";
+import { ToolCursor } from "./tool-cursor";
 
 const MAX_LAYERS = 100;
 
@@ -66,7 +72,9 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     b: 0,
   });
 
-  
+  const [clipboard, setClipboard] = useState<Layer[]>([]);
+
+  const [cursorPosition, setCursorPosition] = useState<Point>({ x: 0, y: 0 });
 
   useDisableScrollBounce();
   const history = useHistory();
@@ -74,7 +82,7 @@ export const Canvas = ({ boardId }: CanvasProps) => {
   const canRedo = useCanRedo();
 
   const insertLayer = useMutation(
-    ({ storage, setMyPresence }, layerType: LayerType.Ellipse | LayerType.Rectangle | LayerType.Text | LayerType.Note, position: Point
+    ({ storage, setMyPresence }, layerType: LayerType.Ellipse | LayerType.Rectangle | LayerType.Text | LayerType.Note | LayerType.Arrow, position: Point
     ) => {
       const liveLayers = storage.get("layers");
       if (liveLayers.size >= MAX_LAYERS) {return};
@@ -82,14 +90,34 @@ export const Canvas = ({ boardId }: CanvasProps) => {
       const liveLayerIds = storage.get("layerIds");
       const layerId = nanoid();
 
-      const layer = new LiveObject({
-        type: layerType,
-        x: position.x,
-        y: position.y,
-        width: 100,
-        height: 100,
-        fill: lastUsedColor,
-      });
+      let layer: LiveObject<Layer>;
+      if (layerType === LayerType.Arrow) {
+        layer = new LiveObject<ArrowLayer>({
+          type: layerType,
+          x: position.x,
+          y: position.y,
+          width: 100,
+          height: 100,
+          points: [{
+            x1: position.x,
+            y1: position.y,
+            x2: position.x + 100,
+            y2: position.y
+          }],
+          fill: lastUsedColor,
+          strokeWidth: 2,
+          arrowStyle: ArrowStyle.Right
+        });
+      } else {
+        layer = new LiveObject<Layer>({
+          type: layerType,
+          x: position.x,
+          y: position.y,
+          width: 100,
+          height: 100,
+          fill: lastUsedColor,
+        });
+      }
 
       liveLayerIds.push(layerId);
       liveLayers.set(layerId, layer);
@@ -100,39 +128,54 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     [lastUsedColor]
   );
 
-  const translateSelectedLayers = useMutation(({storage, self},
-    point : Point,
-  )=>{
-    if(canvasState.mode !== canvasMode.Translating){
+  const translateSelectedLayers = useMutation((
+    { storage, self },
+    point: Point,
+  ) => {
+    if (canvasState.mode !== canvasMode.Translating) {
       return;
     }
 
-    const offset ={
-      x:point.x - canvasState.current.x,
+    const offset = {
+      x: point.x - canvasState.current.x,
       y: point.y - canvasState.current.y,
     };
 
     const liveLayers = storage.get("layers");
 
-    for(const id of self.presence.selection){
+    for (const id of self.presence.selection) {
       const layer = liveLayers.get(id);
 
-      if(layer) {
-        layer.update({
-          x:layer.get("x") + offset.x,
-          y:layer.get("y") + offset.y,
-
-        });
-
-
+      if (layer) {
+        const layerType = layer.get("type");
+        
+        if (layerType === LayerType.Arrow) {
+          const arrowLayer = layer as LiveObject<ArrowLayer>;
+          const points = arrowLayer.get("points");
+          if (Array.isArray(points) && points.length > 0) {
+            const newPoints = [{
+              x1: points[0].x1 + offset.x,
+              y1: points[0].y1 + offset.y,
+              x2: points[0].x2 + offset.x,
+              y2: points[0].y2 + offset.y
+            }];
+            arrowLayer.set("points", newPoints);
+            arrowLayer.update({
+              x: arrowLayer.get("x") + offset.x,
+              y: arrowLayer.get("y") + offset.y,
+            });
+          }
+        } else {
+          layer.update({
+            x: layer.get("x") + offset.x,
+            y: layer.get("y") + offset.y,
+          });
+        }
       }
     }
 
-    setCanvasState({mode: canvasMode.Translating, current:point});
-  },[
-    canvasState,
-  ]);
-
+    setCanvasState({ mode: canvasMode.Translating, current: point });
+  }, [canvasState]);
 
   const unSelectedLayers = useMutation((
     {self , setMyPresence}
@@ -293,27 +336,121 @@ export const Canvas = ({ boardId }: CanvasProps) => {
   }, []);
 
   const onPointerMove = useMutation(
-    ({ setMyPresence }, e: React.PointerEvent) => {
+    ({ setMyPresence, storage }, e: React.PointerEvent) => {
       e.preventDefault();
 
       const current = pointerEventToCanvasPoint(e, camera);
+      setCursorPosition(current);
 
-      if ( canvasState.mode === canvasMode.Pressing){
-        startMultiSelection (current, canvasState.origin);
-      }
-      else if( canvasState.mode === canvasMode.SelectionNet) {
-        updateSelectionNet( current, canvasState.origin);
-      }
-      else if(canvasState.mode === canvasMode.Translating){
-          translateSelectedLayers(current);
+      if (canvasState.mode === canvasMode.Eraser) {
+        // Erase layers when in eraser mode
+        const liveLayers = storage.get("layers");
+        const liveLayerIds = storage.get("layerIds");
+        const layers = liveLayers.toImmutable();
+        
+        // Find layers that intersect with the current point
+        const layerEntries = Array.from(layers.entries());
+        layerEntries.forEach((entry) => {
+          const [layerId, layer] = entry;
+          
+          if (layer.type === LayerType.Path) {
+            // For Path layers, only delete points within erasure radius
+            const pathLayer = layer as PathLayer;
+            const points = pathLayer.points;
+            
+            // Calculate erasure radius based on pressure (if available) or use default
+            const erasureRadius = e.pressure ? 10 + (e.pressure * 15) : 15;
+            
+            // Create a new array for points that will remain after erasure
+            const remainingPoints: number[][] = [];
+            let lastKeptPoint: number[] | null = null;
+            
+            for (let i = 0; i < points.length; i++) {
+              const point = points[i];
+              const [x, y, pressure] = point;
+              const distance = Math.sqrt(
+                Math.pow(x - current.x, 2) + Math.pow(y - current.y, 2)
+              );
+              
+              if (distance >= erasureRadius) {
+                // Point is outside erasure radius, keep it
+                if (lastKeptPoint) {
+                  // Add interpolated points between last kept point and current point
+                  const [lastX, lastY, lastPressure] = lastKeptPoint;
+                  const steps = Math.ceil(distance / 5); // Add points every 5 pixels
+                  for (let j = 1; j < steps; j++) {
+                    const t = j / steps;
+                    const interpX = lastX + (x - lastX) * t;
+                    const interpY = lastY + (y - lastY) * t;
+                    const interpPressure = lastPressure + (pressure - lastPressure) * t;
+                    const interpDistance = Math.sqrt(
+                      Math.pow(interpX - current.x, 2) + Math.pow(interpY - current.y, 2)
+                    );
+                    if (interpDistance >= erasureRadius) {
+                      remainingPoints.push([interpX, interpY, interpPressure]);
+                    }
+                  }
+                }
+                remainingPoints.push([x, y, pressure]);
+                lastKeptPoint = [x, y, pressure];
+              } else {
+                // Point is inside erasure radius, skip it
+                lastKeptPoint = null;
+              }
+            }
+            
+            if (remainingPoints.length === 0) {
+              // If no points remain, delete the entire layer
+              liveLayers.delete(layerId);
+              const index = liveLayerIds.indexOf(layerId);
+              if (index !== -1) {
+                liveLayerIds.delete(index);
+              }
+            } else if (remainingPoints.length < points.length) {
+              // Update the layer with remaining points
+              const liveLayer = liveLayers.get(layerId) as LiveObject<PathLayer>;
+              if (liveLayer) {
+                liveLayer.set("points", remainingPoints);
+              }
+            }
+          } else {
+            // For other layer types, check if cursor is within layer bounds with some padding
+            const padding = 15;
+            const layerBounds = {
+              x: layer.x - padding,
+              y: layer.y - padding,
+              width: layer.width + (padding * 2),
+              height: layer.height + (padding * 2)
+            };
+            
+            if (
+              current.x >= layerBounds.x &&
+              current.x <= layerBounds.x + layerBounds.width &&
+              current.y >= layerBounds.y &&
+              current.y <= layerBounds.y + layerBounds.height
+            ) {
+              // Delete the layer if cursor is within bounds
+              liveLayers.delete(layerId);
+              const index = liveLayerIds.indexOf(layerId);
+              if (index !== -1) {
+                liveLayerIds.delete(index);
+              }
+            }
+          }
+        });
+        setMyPresence({ cursor: current });
+        return;
       }
 
-      else if(canvasState.mode === canvasMode.Resizing) {
-
+      if (canvasState.mode === canvasMode.Pressing) {
+        startMultiSelection(current, canvasState.origin);
+      } else if (canvasState.mode === canvasMode.SelectionNet) {
+        updateSelectionNet(current, canvasState.origin);
+      } else if (canvasState.mode === canvasMode.Translating) {
+        translateSelectedLayers(current);
+      } else if (canvasState.mode === canvasMode.Resizing) {
         resizeSelectedLayer(current);
-      }
-
-      else if (canvasState.mode === canvasMode.Pencil) {
+      } else if (canvasState.mode === canvasMode.Pencil) {
         continueDrawing(current, e);
       }
 
@@ -334,25 +471,28 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     setMyPresence({ cursor: null });
   }, []);
 
-  const onPointerDown = useCallback((
+  const onPointerDown = useMutation((
+    { storage },
     e: React.PointerEvent,
+  ) => {
+    const point = pointerEventToCanvasPoint(e, camera);
 
-  )=>{
-      const point = pointerEventToCanvasPoint(e, camera);
+    if (canvasState.mode === canvasMode.Inserting) {
+      return;
+    }
 
-      if(canvasState.mode === canvasMode.Inserting){
-        return;
+    if (canvasState.mode === canvasMode.Pencil) {
+      startDrawing(point, e.pressure);
+      return;
+    }
 
-      }
-       
-      if (canvasState.mode === canvasMode.Pencil) {
-        startDrawing(point , e.pressure);
-        return;
-      }
+    if (canvasState.mode === canvasMode.Eraser) {
+      e.preventDefault(); // Prevent default selection behavior
+      return;
+    }
 
-        setCanvasState({origin:point, mode: canvasMode.Pressing});
-
-  },[camera, canvasState.mode, setCanvasState, startDrawing]);
+    setCanvasState({ origin: point, mode: canvasMode.Pressing });
+  }, [camera, canvasState.mode, setCanvasState, startDrawing]);
 
   const onPointerUp = useMutation((
     {},
@@ -388,13 +528,14 @@ export const Canvas = ({ boardId }: CanvasProps) => {
   const selections = useOthersMapped((other) => other.presence.selection);
 
   const onLayerPointerDown = useMutation((
-    { self, setMyPresence },
+    { self, setMyPresence, storage },
     e: React.PointerEvent,
     layerId: string,
   ) => {
     if (
       canvasState.mode === canvasMode.Pencil ||
-      canvasState.mode === canvasMode.Inserting
+      canvasState.mode === canvasMode.Inserting ||
+      canvasState.mode === canvasMode.Eraser
     ) {
       return;
     }
@@ -407,7 +548,11 @@ export const Canvas = ({ boardId }: CanvasProps) => {
     if(!self.presence.selection.includes(layerId)) {
       setMyPresence({ selection: [layerId] }, { addToHistory: true });
     }
+    
+    const layer = storage.get("layers").get(layerId);
+    if (layer) {
       setCanvasState({ mode: canvasMode.Translating, current: point });
+    }
   },
   [
     setCanvasState,
@@ -431,6 +576,44 @@ export const Canvas = ({ boardId }: CanvasProps) => {
   }, [selections]);
 
   const deleteLayers = useDeleteLayers();
+
+  const copyLayers = useMutation(({ storage }) => {
+    const selectedLayers = selections;
+    if (selectedLayers.length === 0) return;
+
+    const layers = selectedLayers.map(([_, selection]) => {
+      const layer = storage.get("layers").get(selection[0]);
+      if (!layer) return null;
+      return { ...layer.toObject() };
+    }).filter(Boolean) as Layer[];
+
+    setClipboard(layers);
+  }, [selections]);
+
+  const pasteLayers = useMutation(({ storage, setMyPresence }) => {
+    if (clipboard.length === 0) return;
+
+    const newLayers: Layer[] = clipboard.map(layer => ({
+      ...layer,
+      x: layer.x + 20, // Offset pasted layers slightly
+      y: layer.y + 20,
+    }));
+
+    const newLayerIds = newLayers.map(() => nanoid());
+    
+    // Add new layers to the canvas
+    const liveLayers = storage.get("layers");
+    const liveLayerIds = storage.get("layerIds");
+    
+    newLayers.forEach((layer, index) => {
+      const layerId = newLayerIds[index];
+      liveLayers.set(layerId, new LiveObject(layer));
+      liveLayerIds.push(layerId);
+    });
+
+    // Update selection to the new layers
+    setMyPresence({ selection: newLayerIds });
+  }, [clipboard]);
 
   useEffect(()=>{
     function onKeyDown(e: KeyboardEvent){
@@ -458,6 +641,20 @@ export const Canvas = ({ boardId }: CanvasProps) => {
       document.removeEventListener("keydown", onKeyDown)
     }
   },[deleteLayers, history])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "c" && (e.metaKey || e.ctrlKey)) {
+        copyLayers();
+      }
+      if (e.key === "v" && (e.metaKey || e.ctrlKey)) {
+        pasteLayers();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [copyLayers, pasteLayers]);
 
   return (
     <main className="h-full w-full relative bg-neutral-100 touch-none">
@@ -541,6 +738,12 @@ export const Canvas = ({ boardId }: CanvasProps) => {
               y={0}
               />
           )}
+          <ToolCursor
+            mode={canvasState.mode}
+            layerType={canvasState.mode === canvasMode.Inserting ? canvasState.layerType : undefined}
+            x={cursorPosition.x}
+            y={cursorPosition.y}
+          />
         </g>
       </svg>
     </main>

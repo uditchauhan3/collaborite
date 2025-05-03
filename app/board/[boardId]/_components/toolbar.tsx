@@ -7,6 +7,8 @@ import {
   StickyNote,
   Type,
   Undo2,
+  ArrowRight,
+  Eraser,
 } from "lucide-react";
 import { ToolButton } from "./tool-button";
 
@@ -101,10 +103,30 @@ export const Toolbar = ({
           }
         />
         <ToolButton
+          label="Arrow"
+          icon={ArrowRight}
+          onClick={() =>
+            SetCanvasState({
+              mode: canvasMode.Inserting,
+              layerType: LayerType.Arrow,
+            })
+          }
+          isActive={
+            CanvasState.mode === canvasMode.Inserting &&
+            CanvasState.layerType === LayerType.Arrow
+          }
+        />
+        <ToolButton
           label="Pen"
           icon={Pencil}
           onClick={() => SetCanvasState({ mode: canvasMode.Pencil })}
           isActive={CanvasState.mode === canvasMode.Pencil}
+        />
+        <ToolButton
+          label="Eraser"
+          icon={Eraser}
+          onClick={() => SetCanvasState({ mode: canvasMode.Eraser })}
+          isActive={CanvasState.mode === canvasMode.Eraser}
         />
       </div>
 

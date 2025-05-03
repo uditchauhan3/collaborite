@@ -1,15 +1,13 @@
-import { Tooltip,TooltipContent,TooltipProvider,TooltipTrigger } from "@/components/ui/tooltip";
-import { TooltipArrow } from "@radix-ui/react-tooltip";
-import { ContainerWithChildren } from "postcss/lib/container";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface HintProps {
-    label:string;
+    label: string;
     children: React.ReactNode;
-    side?:"top"|"bottom"| "left"|"right";
-    align?:"start"| "center" |"end";
-    sideOffset?:number;
-    alignOffset?:number;
-};
+    side?: "top" | "bottom" | "left" | "right";
+    align?: "start" | "center" | "end";
+    sideOffset?: number;
+    alignOffset?: number;
+}
 
 export const Hint = ({
     label,
@@ -18,25 +16,25 @@ export const Hint = ({
     align,
     sideOffset,
     alignOffset
-}: HintProps)=>{
+}: HintProps) => {
     return (
-<TooltipProvider>
-    <Tooltip delayDuration={100}>
-        <TooltipTrigger asChild>
-            {children}
-        </TooltipTrigger>
-        <TooltipContent
-        className="text-white bg-black border-black"
-        side={side}
-        align={align}
-        sideOffset={sideOffset}
-        alignOffset={alignOffset}
-        >
-            <p className="font-semibold capitalize">
-                {label}
-            </p>
-        </TooltipContent>
-    </Tooltip>
-</TooltipProvider>)
-
-}
+        <TooltipProvider>
+            <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                    {children}
+                </TooltipTrigger>
+                <TooltipContent
+                    className="text-white bg-black border-black"
+                    side={side}
+                    align={align}
+                    sideOffset={sideOffset}
+                    alignOffset={alignOffset}
+                >
+                    <p className="font-semibold capitalize">
+                        {label}
+                    </p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
+};

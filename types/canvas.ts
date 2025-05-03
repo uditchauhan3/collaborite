@@ -18,6 +18,7 @@ export enum LayerType {
   Path = "path",
   Text = "text",
   Note = "note",
+  Arrow = "arrow",
 }
 
 // Shared fields for all layers
@@ -52,13 +53,41 @@ export type NoteLayer = BaseLayer & {
   type: LayerType.Note;
 };
 
+export enum ArrowStyle {
+  Right = "right",
+  Left = "left",
+  Up = "up",
+  Down = "down",
+  Double = "double",
+  Curved = "curved",
+  Dashed = "dashed",
+  Thick = "thick",
+  Thin = "thin"
+}
+
+export type ArrowPoint = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
+
+export type ArrowLayer = BaseLayer & {
+  type: LayerType.Arrow;
+  points: ArrowPoint[];
+  strokeWidth?: number;
+  arrowStyle?: ArrowStyle;
+  isDashed?: boolean;
+};
+
 // Union of all layers
 export type Layer =
   | RectangleLayer
   | EllipseLayer
   | PathLayer
   | TextLayer
-  | NoteLayer;
+  | NoteLayer
+  | ArrowLayer;
 
 // Basic point (x, y)
 export type Point = {
@@ -91,6 +120,7 @@ export enum canvasMode {
   Resizing = "resizing",
   Pencil = "pencil",
   SelectionNet = "selectionNet",
+  Eraser = "eraser",
 }
 
 // Canvas interaction state
@@ -109,10 +139,13 @@ export type CanvasState =
     }
   | {
       mode: canvasMode.Inserting;
-      layerType: LayerType.Ellipse | LayerType.Rectangle | LayerType.Text | LayerType.Note;
+      layerType: LayerType.Ellipse | LayerType.Rectangle | LayerType.Text | LayerType.Note | LayerType.Arrow;
     }
   | {
       mode: canvasMode.Pencil;
+    }
+  | {
+      mode: canvasMode.Eraser;
     }
   | {
       mode: canvasMode.Pressing;

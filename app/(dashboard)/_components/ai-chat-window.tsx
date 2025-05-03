@@ -90,7 +90,7 @@ export const AIChatWindow = ({ onClose }: AIChatWindowProps) => {
         <div className="handle cursor-move p-3 border-b flex items-center justify-between bg-gray-50 rounded-t-lg">
           <div className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-blue-500" />
-            <h3 className="font-semibold text-gray-700">AI Assistant</h3>
+            <h3 className="font-semibold text-gray-700">CollabAI</h3>
           </div>
           <button
             onClick={onClose}

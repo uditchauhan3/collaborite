@@ -99,7 +99,7 @@ export const ChatWindow = ({ onClose }: ChatWindowProps) => {
       <div className="fixed bottom-20 right-20 w-80 h-96 bg-white rounded-lg shadow-xl flex flex-col border">
         {/* Header */}
         <div className="handle cursor-move p-3 border-b flex items-center justify-between bg-gray-50 rounded-t-lg">
-          <h3 className="font-semibold text-gray-700">Team Chat</h3>
+          <h3 className="font-semibold text-gray-700">Collab Chat</h3>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-200 rounded-full transition"
